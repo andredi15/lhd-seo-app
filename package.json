@@ -1,0 +1,25 @@
+{
+  "name": "lighthouse-seo-specialist",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Evidence-led page SEO analysis for Lighthouse Digital",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test",
+    "test:live": "node scripts/live-check.js",
+    "test:export": "node scripts/export-check.js",
+    "test:domain": "node scripts/domain-live-check.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "iconv-lite": "^0.7.0",
+    "ipaddr.js": "^2.2.0",
+    "robots-parser": "^3.0.1"
+  }
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Lighthouse Digital’s evidence-led SEO page analysis workspace.">
+  <title>Lighthouse SEO Specialist</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to analyzer</a>
+  <aside class="sidebar" aria-label="Workspace navigation">
+    <a href="/" class="brand"><span class="brand-mark">L<span>H</span></span><span>LIGHTHOUSE<small>DIGITAL</small></span></a>
+    <div class="workspace-label">AGENCY WORKSPACE</div>
+    <nav class="side-nav">
+      <button id="nav-analyzer" class="selected" aria-current="page"><span class="nav-symbol" aria-hidden="true">↗</span> SEO analyzer</button>
+      <button id="nav-history"><span class="nav-symbol" aria-hidden="true">◷</span> Previous reports <span id="history-count" class="count">0</span></button>
+      <button id="nav-method"><span class="nav-symbol" aria-hidden="true">≡</span> Scoring &amp; sources</button>
+    </nav>
+    <div class="sidebar-bottom"><span class="small-label">LIGHTHOUSE SEO SPECIALIST</span><p>A clearer path to<br>better SEO decisions.</p><span class="version">Internal workspace · v1.0</span></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div>Lighthouse Digital <span class="breadcrumb">/</span> SEO Specialist</div><span id="engine-status" class="status-pill">Checking engine</span></header>
+    <main id="main" tabindex="-1">
+      <section id="analyzer-screen">
+        <div class="page-heading"><div><p class="eyebrow">PAGE INTELLIGENCE</p><h1>SEO Page Analyzer</h1><p class="lead">Analyze how well a page is optimized for your target keywords and compare it against the competition.</p></div><span class="label-outline">Evidence before advice</span></div>
+        <div class="mode-switch" role="group" aria-label="Analysis mode"><button type="button" data-mode="page" aria-pressed="true">Page Analysis</button><button type="button" data-mode="domain" aria-pressed="false">Domain Analysis</button></div>
+        <details class="input-card" id="input-details" open>
+          <summary><span>Configure your analysis</span><span class="summary-hint">One target page. A focused action plan.</span></summary>
+          <form id="analyze-form">
+            <div class="form-grid">
+              <div class="target-fields">
+                <label for="target-url"><span id="target-label">Target URL</span> <span class="required">*</span></label>
+                <input id="target-url" type="url" name="targetUrl" placeholder="https://example.com/service-page/" required maxlength="2048" autocomplete="url">
+                <label for="keywords"><span id="keywords-label">Target Keywords</span> <span id="keywords-required" class="required">*</span></label>
+                <textarea id="keywords" name="keywords" placeholder="Enter one keyword per line" required maxlength="3220" rows="5" aria-describedby="keyword-hint"></textarea>
+                <small id="keyword-hint">One per line or comma-separated. Up to 20 keywords; put your primary keyword first.</small>
+              </div>
+              <div class="competitor-fields"><div class="label-row"><label id="competitors-label">Competitor URLs</label><span class="muted">Optional · up to 5</span></div><div id="competitor-inputs"></div><button id="add-competitor" type="button" class="text-button">+ Add competitor</button><div class="form-note"><strong>A focused page review</strong><p>We retrieve the supplied pages and compare their content. Every finding stays connected to its source.</p></div></div>
+            </div>
+            <div class="form-footer"><span id="crawl-scope">Single-page crawl · Transparent scoring</span><div id="domain-limit" hidden><label for="crawl-limit">Crawl limit per domain</label><select id="crawl-limit"><option value="10">10 pages</option><option value="25" selected>25 pages</option><option value="50">50 pages</option></select><small>Redirects and errors count toward this limit.</small></div><button class="primary" id="analyze-button" type="submit">Analyze SEO <span aria-hidden="true">↗</span></button></div>
+          </form>
+        </details>
+        <div id="analysis-progress" class="progress-panel" hidden role="status" aria-live="polite"><div class="progress-heading"><strong id="progress-current">Fetching target page</strong><button id="cancel-analysis" class="secondary" type="button">Cancel</button></div><progress aria-label="Analysis is running"></progress><ol id="progress-stages"></ol></div>
+        <div id="error" class="error-panel" hidden role="alert"></div>
+        <div id="empty-state" class="empty-state"><div class="empty-mark" aria-hidden="true">↗</div><h2>Start with the page that matters.</h2><p>Get a clear view of keyword targeting, content gaps, and what to fix first.</p><div class="empty-features"><span>01 <b>Understand your page</b></span><span>02 <b>Compare the competition</b></span><span>03 <b>Prioritize your next move</b></span></div></div>
+        <section id="report" hidden aria-label="SEO analysis report"></section>
+      </section>
+      <section id="history-screen" hidden><p class="eyebrow">YOUR WORKSPACE</p><h1>Previous Reports</h1><p class="lead">Saved on this browser. Open a report to review its evidence and action plan.</p><div id="history-list"></div></section>
+      <section id="method-screen" hidden><p class="eyebrow">SCORING &amp; SOURCES</p><h1>Know what the score means.</h1><div class="card prose"><h2>A prioritization tool</h2><p>The SEO Optimization Score is a weighted heuristic, not a Google ranking score. It helps prioritize observed page issues. It does not predict rankings, traffic, or revenue.</p><h3>Transparent weighting</h3><p>Search Intent &amp; Relevance 20%; Content Quality &amp; Topic Coverage 20%; On-Page SEO 20%; Technical/Page Structure 15%; Internal Linking &amp; Site Signals 10%; Local SEO Signals 10% for local queries; Conversion/Trust Signals 5%. For non-local queries, the local weight is split equally between intent and content.</p><p>A noindex or none directive caps the score at 35. Each report shows its individual category checks. Keyword scores use their own placement and intent formula and do not include all technical checks.</p><h3>Domain Competitive Score</h3><p>Domain Analysis uses a separate score: Topical Coverage 25%; Site Architecture 20%; Content Quality &amp; Depth 20%; Internal Linking 15%; Local SEO Coverage 10%; Technical Consistency 10%. For non-local sites, topical coverage becomes 30% and content becomes 25%. The score describes a bounded sample, not domain authority or rankings.</p><h3>Observed versus inferred</h3><p>Titles, metadata, headings, static text, links, images, HTTP details, and schema are extracted from the supplied URLs. Query intent, geographic intent, topical breadth, trust wording, and content gaps are explicitly labeled inferences. The English-language rules may miss natural synonyms, unknown place names, and content that depends on JavaScript.</p><p>Missing alt attributes and empty alt attributes are separate: empty alt text may be correct for decorative images. Word count and character lengths are diagnostic cues, not targets. Page mode does not fetch link destinations or image contents. Domain mode follows eligible internal HTML links within its limit. Metadata is reported as declared, not verified.</p><h3>AI editorial layer</h3><p>When configured, the backend uses OpenAI’s Responses API with Structured Outputs. Retrieved page text is untrusted input; AI is given no tools. Every accepted suggestion must carry an exact quotation from a retrieved source. AI cannot overwrite facts or scores. Citation validation does not prove that an interpretation is correct: review generated suggestions before publishing.</p><h3>External data</h3><p>Core Web Vitals, rankings, backlinks, traffic, Search Console and Business Profile data require actual integrations. They are not measured or simulated here. Fetch duration measures a single HTML response from this server, not browser loading performance.</p><h3>Scope and privacy</h3><p>Page Analysis retrieves the supplied target and competitor pages. Domain Analysis discovers internal pages and XML sitemaps with a 10, 25 or 50 HTML URL request limit per domain, including redirects and errors. Discovery counts are not indexed-page counts; click depth and orphan-like signals use only observed links. Reports are stored locally in this browser, up to ten reports. Configuring OpenAI sends selected extracted page text and keywords to that API; the API key stays on the server.</p></div></section>
+    </main>
+    <footer class="app-footer">Lighthouse Digital <span>Useful recommendations. Traceable evidence.</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

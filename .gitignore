@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+artifacts/
+.sites-runtime/
+*.log
