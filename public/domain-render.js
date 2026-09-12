@@ -1,7 +1,7 @@
 import {esc,safeUrl} from './html.js';
 const link=(url,text=url)=>`<a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
 const card=(title,body)=>`<section class="card"><h2>${esc(title)}</h2>${body}</section>`;
-const tag=text=>`<span class="tag">${esc(text)}</span>`;
+const tag=text=>`<span class="tag ${{Critical:"critical","High Impact":"high","Medium Impact":"medium"}[text]||""}">${esc(text)}</span>`;
 const note=text=>`<p class="caption">${esc(text)}</p>`;
 const list=items=>items.length?`<ul class="domain-list">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`:note('No findings in this sample. This does not establish absence across the entire website.');
 const table=(heads,rows)=>`<div class="table-wrap"><table class="domain-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c??'Unknown')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
