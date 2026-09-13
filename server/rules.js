@@ -1,3 +1,4 @@
+import {suggestedCopy} from '../public/recommendation-examples.js';
 import { matchKeyword } from './keywords.js';
 export const priorityOrder = ['Critical', 'High Impact', 'Medium Impact', 'Low Impact'];
 export function analyzeRules(page, keywords, topics) {
@@ -50,9 +51,11 @@ export function makeImprovements(page, keywords, issues, gaps) {
   const sentences = page.body.split(/(?<=[.!?])\s+/).filter(s => s.length >= 40 && s.length <= 230);
   const topicalSentence = [...sentences].sort((a,b) => matchKeyword(b,topic).coverage - matchKeyword(a,topic).coverage)[0] || '';
   const description = page.description && matchKeyword(page.description,topic).coverage >= .5 && page.description.length <= 180 ? page.description : topicalSentence || page.description;
+  const concrete = suggestedCopy(page, topic);
+  title = concrete.title || title;
   const drafts = [
     { element: 'SEO title', current: page.title, suggested: title || 'Insufficient retrieved evidence to suggest a title.', note: 'Preserves existing title/heading wording. Confirm query alignment and improve the differentiator using verified business details.' },
-    { element: 'Meta description', current: page.description, suggested: description || 'Insufficient retrieved evidence to draft a description.', note: 'Retains a relevant existing description or selects a topical sentence from retrieved copy. Refine the benefit and next step using verified business details.' },
+    { element: 'Meta description', current: page.description, suggested: concrete.description || description || 'Insufficient retrieved evidence to draft a description.', note: 'Retains a relevant existing description or selects a topical sentence from retrieved copy. Refine the benefit and next step using verified business details.' },
     { element: 'H1', current: page.h1.join(' | '), suggested: page.h1.length === 1 && keywords[0].h1.coverage >= .8 ? page.h1[0] : supportedTopic ? topic : page.h1[0] || title || 'Confirm the page subject before writing an H1.', note: supportedTopic ? 'Preserve the current H1 when it describes the page clearly. Otherwise verify this topic-led draft.' : 'The query has little support in the retrieved copy. Confirm page/query alignment before changing the subject.' }
   ];
   const outline = [{ level: 'H1', text: drafts[2].suggested, reason: 'Clear page purpose; verify the actual offering.' }, { level: 'Intro', text: `Introduce ${topic}`, reason: 'Explain what the visitor will find using verified facts.' }];

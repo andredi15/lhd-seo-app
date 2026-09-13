@@ -1,3 +1,4 @@
+import {explainReport,renderIssueExamples} from './recommendation-examples.js';
 import {renderIntegrations} from './integrations-render.js';
 import {esc,safeUrl} from './html.js';
 import {renderDomainReport} from './domain-render.js';
@@ -13,7 +14,7 @@ const copy = text => `<button class="copy-button" type="button" data-copy="${esc
 const rowTable = (headers, rows, className = '') => `<div class="table-wrap"><table class="${className}"><thead><tr>${headers.map(h => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 
 function renderIssues(issues, limit) {
-  return issues.length ? issues.slice(0, limit || issues.length).map((i, index) => `<article class="issue">${badge(i.priority, priorityClass(i.priority))}<span class="element">${esc(i.element)}</span><h3><span class="issue-number">${String(index + 1).padStart(2, '0')}</span>${esc(i.issue)}</h3><p class="why">${esc(i.why)}</p><p><strong>Recommended fix:</strong> ${esc(i.fix)}</p>${i.example ? `<div class="draft-title"><p>${esc(i.example)}</p>${copy(i.example)}</div>` : ''}<details><summary>View evidence &amp; source</summary>${evidence(i.evidence, i.sourceUrl)}<p>${esc(i.basis)}</p></details></article>`).join('') : empty('No issues detected by these rules. A manual editorial review is still useful.');
+  return issues.length ? issues.slice(0, limit || issues.length).map((i, index) => `<article class="issue">${badge(i.priority, priorityClass(i.priority))}<span class="element">${esc(i.element)}</span><h3><span class="issue-number">${String(index + 1).padStart(2, '0')}</span>${esc(i.issue)}</h3><p class="why">${esc(i.why)}</p><p><strong>Recommended fix:</strong> ${esc(i.fix)}</p>${renderIssueExamples(i)}<details><summary>View evidence &amp; source</summary>${evidence(i.evidence, i.sourceUrl)}<p>${esc(i.basis)}</p></details></article>`).join('') : empty('No issues detected by these rules. A manual editorial review is still useful.');
 }
 function keywordTable(keywords) { return rowTable(['Keyword', 'Optimization', 'Likely intent', 'Title', 'H1'], keywords.map(k => [k.keyword, `${k.score}/100`, k.intent.labels.join(' · '), k.title.label, k.h1.label])); }
 function overview(report) {
@@ -80,6 +81,7 @@ function actionPlan(report, checked) {
 export const tabs = ['Overview','Keywords','On-Page','Content','Local SEO','Competitors','Technical','Action Plan'];
 const renderers = [overview, keywords, onPage, content, local, competitors, technical, actionPlan];
 export function renderReport(report, checked = []) {
+  report=explainReport(report);
   if(report.mode==='domain') return renderDomainReport(report,checked);
   return `<header class="report-header"><div><p class="eyebrow">ANALYSIS REPORT</p><h2>${esc(new URL(report.target.page.url).hostname)}</h2><div class="caption break">${link(report.target.page.url)}</div><div class="report-meta">${esc(new Date(report.date).toLocaleString())} · ${report.input.keywords.length} keywords · ${report.comparison.successfulCount} competitors retrieved</div></div><div class="report-actions"><button class="secondary" id="copy-recommendations">Copy Recommendations</button><button class="secondary" id="export-html">Export HTML</button><button class="secondary" id="export-json">Export JSON</button><button class="secondary" id="export-print">Print / PDF</button></div></header><details class="notice ${report.competitors.some(c => c.error) || report.target.page.wordCount < 80 ? 'warning' : ''}"><summary>Sources, limitations &amp; crawl warnings (${report.warnings.length})</summary><ul>${report.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></details><nav class="tabs" role="tablist" aria-label="Report sections">${tabs.map((tab, i) => `<button role="tab" id="tab-${i}" aria-controls="panel-${i}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-tab="${i}">${esc(tab)}</button>`).join('')}</nav>${renderers.map((fn, i) => `<section class="tab-panel" id="panel-${i}" role="tabpanel" aria-labelledby="tab-${i}" ${i ? 'hidden' : ''}><h2 class="print-only">${tabs[i]}</h2>${fn(report, checked)}</section>`).join('')}`;
 }

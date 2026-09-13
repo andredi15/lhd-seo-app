@@ -1,8 +1,10 @@
+import {explainReport} from './recommendation-examples.js';
 import { esc, renderReport } from './render.js';
 let exportToken = '';
 export function setExportToken(token) { exportToken = token; }
 export function recommendationText(report, checked = []) {
-  return [`LIGHTHOUSE SEO SPECIALIST`, report.input.targetUrl, `Analyzed: ${report.date}`, `${report.mode==='domain'?'Domain Competitive Score':'SEO Optimization Score'}: ${report.target.score.overall}/100 (not a Google ranking score)`, '', ...report.target.issues.map(i => `${i.priority.toUpperCase()} — ${i.issue}\nElement: ${i.element}\nEvidence: ${i.evidence}\nWhy: ${i.why}\nFix: ${i.fix}${i.example ? `\nExample: ${i.example}` : ''}\nSource: ${i.sourceUrl}\n`), ...(report.opportunities||[]).map(o=>`CONTENT OPPORTUNITY: ${o.title}\nTopic: ${o.topic}\nIntent: ${o.intent}\nPage type: ${o.pageType}\nSupports: ${o.supportUrl}\nWhy: ${o.why}\n`), ...Object.entries(report.actionPlan).flatMap(([group, items]) => [group.toUpperCase(), ...items.map(i => `[${checked.includes(i.id) ? 'x' : ' '}] ${i.text}\n    ${i.detail}`), ''])].join('\n');
+  report=explainReport(report);
+  return [`LIGHTHOUSE SEO SPECIALIST`, report.input.targetUrl, `Analyzed: ${report.date}`, `${report.mode==='domain'?'Domain Competitive Score':'SEO Optimization Score'}: ${report.target.score.overall}/100 (not a Google ranking score)`, '', ...report.target.issues.map(i => `${i.priority.toUpperCase()} — ${i.issue}\nElement: ${i.element}\nEvidence: ${i.evidence}\nWhy: ${i.why}\nFix: ${i.fix}${(i.examples||[i.comparison].filter(Boolean)).map(c=>`\nCurrent: ${c.current}\n${c.label}: ${c.suggested}\nReview note: ${c.note}`).join('')}\nSource: ${i.sourceUrl}\n`), ...(report.opportunities||[]).map(o=>`CONTENT OPPORTUNITY: ${o.title}\nTopic: ${o.topic}\nIntent: ${o.intent}\nPage type: ${o.pageType}\nSupports: ${o.supportUrl}\nWhy: ${o.why}\n`), ...Object.entries(report.actionPlan).flatMap(([group, items]) => [group.toUpperCase(), ...items.map(i => `[${checked.includes(i.id) ? 'x' : ' '}] ${i.text}\n    ${i.detail}`), ''])].join('\n');
 }
 function downloadReport(report, checked, format) {
   if (!exportToken) throw new Error('Reload the application before exporting.');

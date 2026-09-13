@@ -1,3 +1,4 @@
+import {explainReport} from '../../public/recommendation-examples.js';
 import { randomUUID } from 'node:crypto';
 import { crawlDomain } from './discovery.js';
 import { analyzeDomain } from './analysis.js';
@@ -25,12 +26,12 @@ export async function buildDomainReport(input,emit=()=>{},signal,dependencies={}
   const comparison=compareDomains(target,competitors,input.keywords);const opportunities=planContent(target,comparison,input.keywords);
   const summary={strengths:target.score.categories.filter(c=>c.score>=75).map(c=>`${c.name}: ${c.score}/100 within this sample.`),weaknesses:target.issues.slice(0,5).map(i=>i.issue),nextMove:target.issues[0]?.fix || opportunities[0]?.why || 'Review the sampled content against real customer needs.'};
   const actionPlan={'Fix First':target.issues.filter(i=>['Critical','High Impact'].includes(i.priority)).map(i=>({id:i.id,text:i.issue,detail:i.fix})),Next:[...target.issues.filter(i=>i.priority==='Medium Impact').map(i=>({id:i.id,text:i.issue,detail:i.fix})),...opportunities.slice(0,3).map(o=>({id:o.id,text:`Validate content opportunity: ${o.title}`,detail:`${o.why} Support: ${o.supportUrl}`}))],Ongoing:[{id:'domain-monitor',text:'Re-crawl after meaningful changes',detail:'Use the same crawl limit and compare the sample, not indexed-page counts.'},{id:'domain-monthly',text:'Review the next six content opportunities monthly',detail:'Confirm service relevance and existing coverage, create original useful content, then measure results with actual analytics.'}]};
-  return {id:randomUUID(),schemaVersion:1,mode:'domain',date:new Date().toISOString(),input,target,competitors,comparison,opportunities,summary,actionPlan,table:footprintTable(target,competitors),integrations:[],warnings:[
+  return explainReport({id:randomUUID(),schemaVersion:1,mode:'domain',date:new Date().toISOString(),input,target,competitors,comparison,opportunities,summary,actionPlan,table:footprintTable(target,competitors),integrations:[],warnings:[
     'All metrics describe this bounded static-HTML crawl. Pages discovered during this analysis are not indexed pages or the full site size.',
     `${input.crawlLimit} HTML URL requests per domain, including redirects and errors. At most six sitemap documents, 5,000 discovered candidates, 24 MB decoded responses and three minutes of crawl work per domain.`,
     'No backlink authority, domain authority, actual rankings or indexed-page counts are measured.',
     'Orphan-like pages and click depths use observed links only. Uncrawled or JavaScript-rendered pages may change conclusions.',
     'Topic groups and usefulness are inferred. AI is optional and labeled; deterministic scores do not change when AI is enabled.',
     ...(target.stopped?[target.stopped]:[]),...target.warnings,...competitors.filter(c=>c.error).map(c=>`${c.url}: ${c.error}`)
-  ]};
+  ]});
 }

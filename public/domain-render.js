@@ -1,3 +1,4 @@
+import {renderIssueExamples} from './recommendation-examples.js';
 import {renderIntegrations} from './integrations-render.js';
 import {esc,safeUrl} from './html.js';
 const link=(url,text=url)=>`<a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
@@ -9,7 +10,7 @@ const table=(heads,rows)=>`<div class="table-wrap"><table class="domain-table"><
 const evidence=rows=>rows.map(e=>`<blockquote>${esc(e.quote)}</blockquote>${note('Retrieved source')}${link(e.url)}`).join('');
 const topic=p=>p.aiClassification||p.classification;
 const pageNames=pages=>pages.map(p=>p.title||p.url);
-const issueList=issues=>issues.length?issues.map(i=>`<article class="issue">${tag(i.priority)}<h3>${esc(i.issue)}</h3><p class="why">${esc(i.why)}</p><p><strong>Recommended fix:</strong> ${esc(i.fix)}</p><details><summary>Observed URLs (${i.affectedUrls.length})</summary>${i.affectedUrls.map(u=>`<p class="caption">${link(u)}</p>`).join('')}</details></article>`).join(''):note('No issues detected by the current rules.');
+const issueList=issues=>issues.length?issues.map(i=>`<article class="issue">${tag(i.priority)}<h3>${esc(i.issue)}</h3><p class="why">${esc(i.why)}</p><p><strong>Recommended fix:</strong> ${esc(i.fix)}</p>${renderIssueExamples(i)}<details><summary>Observed URLs (${i.affectedUrls.length})</summary>${i.affectedUrls.map(u=>`<p class="caption">${link(u)}</p>`).join('')}</details></article>`).join(''):note('No issues detected by the current rules.');
 const groupedTopics=site=>{
   const map=new Map();for(const p of site.pages)for(const category of topic(p).categories){if(!map.has(category))map.set(category,[]);map.get(category).push(p);}
   return [...map].map(([category,pages])=>`<section class="topic-group"><div class="card-header"><h3>${esc(category)}</h3>${tag(`${pages.length} pages`)}</div>${pages.map(p=>`<article class="topic-node"><strong>${link(p.url,topic(p).topic)}</strong><p class="caption">${esc(topic(p).method)} · ${p.inboundCount} observed referring pages</p><details><summary class="caption">Source evidence</summary><blockquote>${esc(topic(p).evidence)}</blockquote></details></article>`).join('')}</section>`).join('');

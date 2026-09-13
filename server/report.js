@@ -1,3 +1,4 @@
+import {explainReport} from '../public/recommendation-examples.js';
 import { randomUUID } from 'node:crypto';
 import { normalizeUrl, crawlPage } from './crawler.js';
 import { parsePage } from './parser.js';
@@ -70,5 +71,5 @@ export async function buildReport(input, emit = () => {}, signal, dependencies =
     Next: target.issues.filter(i => ['Medium Impact', 'Low Impact'].includes(i.priority)).map(i => ({ id: i.id, text: i.issue, detail: i.fix })),
     Ongoing: [{ id: 'ongoing-review', text: 'Review content against real customer questions', detail: 'Keep business details accurate; add supporting content only where it serves a need.' }, { id: 'ongoing-measure', text: 'Measure search visibility and conversions', detail: 'Use Search Console, analytics, or a legitimate rank data source when connected. This report contains none of those metrics.' }]
   };
-  return report;
+  return explainReport(report);
 }
