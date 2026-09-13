@@ -55,7 +55,7 @@ $('#nav-method').addEventListener('click', () => screen('method'));
 $('#cancel-analysis').addEventListener('click', () => controller?.abort());
 $('#analyze-form').addEventListener('submit', async event => {
   event.preventDefault(); if (controller) return;
-  const input = { mode,targetUrl: $('#target-url').value.trim(), keywords: $('#keywords').value, competitorUrls: [...document.querySelectorAll('#competitor-inputs input')].map(i => i.value.trim()).filter(Boolean),...(mode==='domain'?{crawlLimit:Number($('#crawl-limit').value)}:{}) };
+  const input = { mode,includePageSpeed: $('#include-pagespeed').checked,targetUrl: $('#target-url').value.trim(), keywords: $('#keywords').value, competitorUrls: [...document.querySelectorAll('#competitor-inputs input')].map(i => i.value.trim()).filter(Boolean),...(mode==='domain'?{crawlLimit:Number($('#crawl-limit').value)}:{}) };
   controller = new AbortController();
   document.querySelectorAll('[data-mode]').forEach(b=>{b.disabled=true;});
   $('#analyze-button').disabled = true; $('#analyze-button').textContent = 'Analyzing…'; $('#analysis-progress').hidden = false; $('#progress-stages').replaceChildren(); $('#progress-current').textContent = 'Connecting to analyzer'; $('#error').hidden = true; $('#report').hidden = true; $('#empty-state').hidden = true;
@@ -104,5 +104,5 @@ document.addEventListener('keydown', event => {
   if (!event.target.matches('[role=tab]') || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
   event.preventDefault(); const buttons = [...document.querySelectorAll('[role=tab]')]; const index = buttons.indexOf(event.target); const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length; buttons[next].click(); buttons[next].focus();
 });
-fetch('/api/health').then(r => r.json()).then(data => { setExportToken(data.exportToken); $('#engine-status').textContent = data.aiConfigured ? 'AI + rules ready' : 'Rules engine ready'; }).catch(() => { $('#engine-status').textContent = 'Engine unavailable'; });
+fetch('/api/health').then(r => r.json()).then(data => { setExportToken(data.exportToken); $('#include-pagespeed').disabled=!data.pageSpeedConfigured; $('#include-pagespeed').checked=!!data.pageSpeedConfigured; $('#pagespeed-status').textContent=data.pageSpeedConfigured?'Connected':'Requires server API key'; $('#engine-status').textContent = data.aiConfigured ? 'AI + rules ready' : 'Rules engine ready'; }).catch(() => { $('#engine-status').textContent = 'Engine unavailable'; });
 competitorField(); updateHistory();

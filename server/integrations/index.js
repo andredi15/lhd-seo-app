@@ -1,6 +1,7 @@
-/** Future provider contract: { id, capabilities, isConfigured(), async collect({url, keywords, signal}) }.
- * Each returned metric must include source, collectedAt, value, and units.
- * No provider is registered until credentials and actual collection are implemented.
+import {createPageSpeedProvider} from './pagespeed.js';
+/** Provider contract: { id, isConfigured(), async collect({report, signal, emit}) }.
+ * Successful runs include source and collection time; measurements include values and units.
+ * Only configured providers are called. Provider failures remain separate from SEO findings.
  * Keep observations separate from the heuristic optimization score.
  */
 export const providers = new Map();
@@ -12,7 +13,9 @@ export async function collectIntegrations(context) {
   const output = [];
   for (const provider of providers.values()) if (provider.isConfigured()) {
     try { output.push({ provider: provider.id, metrics: await provider.collect(context) }); }
-    catch { output.push({ provider: provider.id, error: 'Integration data unavailable.' }); }
+    catch { context.signal?.throwIfAborted(); output.push({ provider: provider.id, error: 'Integration data unavailable.' }); }
   }
   return output;
 }
+
+registerProvider(createPageSpeedProvider());

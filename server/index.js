@@ -44,7 +44,7 @@ app.post('/api/export', rateLimit({windowMs:60000,limit:20,standardHeaders:'draf
   } catch { res.status(400).send('Could not export this report. Reopen it and try again.'); }
 });
 app.use(express.json({ limit: '20kb' }));
-app.get('/api/health', (_req, res) => res.set('Cache-Control','no-store').json({ ok: true, aiConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL), exportToken }));
+app.get('/api/health', (_req, res) => res.set('Cache-Control','no-store').json({ ok: true, aiConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL), pageSpeedConfigured: !!process.env.PAGESPEED_API_KEY, exportToken }));
 app.use('/api/analyze', rateLimit({ windowMs: 60000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many analyses. Try again in a minute.' } }));
 let active = 0;
 app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
@@ -56,14 +56,17 @@ app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
   if (active >= 2) return res.status(429).json({ error: 'Two analyses are already running. Please try again shortly.' });
   active++;
   const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), domain?1800000:300000);
+  const deadline = setTimeout(() => controller.abort(), domain?1800000:600000);
   res.on('close', () => { if (!res.writableEnded) controller.abort(); });
   res.status(200).set({ 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
   res.flushHeaders();
   const send = event => { if (!res.destroyed) res.write(`${JSON.stringify(event)}\n`); };
   try {
     const report = await (domain?buildDomainReport:buildReport)(input, message => send({ type: 'progress', message }), controller.signal);
-    report.integrations = await collectIntegrations({ url: input.targetUrl, keywords: input.keywords, signal: controller.signal });
+    if (req.body.includePageSpeed === true) {
+      report.input.includePageSpeed = true;
+      report.integrations = await collectIntegrations({ report, signal: controller.signal, emit: message => send({type:'progress',message}) });
+    }
     send({ type: 'report', report });
   } catch (error) { send({ type: 'error', error: controller.signal.aborted ? 'Analysis cancelled or time limit reached.' : error.message }); }
   finally { clearTimeout(deadline); active--; res.end(); }
