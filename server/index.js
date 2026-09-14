@@ -1,3 +1,4 @@
+import {createPublicRouter} from './public.js';
 import {buildPdfReport} from '../public/pdf-report.js';
 import {renderPdf} from './pdf.js';
 import {shouldRunPageSpeed} from './integrations/pagespeed.js';
@@ -19,10 +20,15 @@ import {buildDomainReport} from './domain/report.js';
 const host = process.env.HOST || '127.0.0.1';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !process.env.APP_PASSWORD) throw new Error('Set APP_PASSWORD before binding to a non-loopback HOST.');
 const app = express();
+// Configure only for a known reverse-proxy topology; never trust arbitrary forwarded IPs.
+if (/^[1-3]$/.test(process.env.TRUST_PROXY_HOPS||'')) app.set('trust proxy',Number(process.env.TRUST_PROXY_HOPS));
 const exportToken = randomBytes(24).toString('hex');
 const pdfPreviews=new Map();
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'"], objectSrc: ["'none'"], upgradeInsecureRequests: null } } }));
+// Public audit routes have their own bounded API; agency routes below retain Basic Auth.
+app.use((req,res,next)=>{const name=req.hostname.replace(/^\[|\]$/g,'');if(['127.0.0.1','localhost','::1'].includes(host)&&!['127.0.0.1','localhost','::1'].includes(name))return res.status(403).send('Host not allowed.');next();});
+app.use(createPublicRouter());
 app.use((req, res, next) => {
   // Reject DNS rebinding against the local dashboard. Browser requests must use the configured host.
   const name = req.hostname.replace(/^\[|\]$/g, '');
@@ -93,6 +99,7 @@ app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
   } catch (error) { send({ type: 'error', error: controller.signal.aborted ? 'Analysis cancelled or time limit reached.' : error.message }); }
   finally { clearTimeout(deadline); active--; res.end(); }
 });
+app.get('/agency',(_req,res)=>res.sendFile(fileURLToPath(new URL('../public/index.html',import.meta.url))));
 app.use(express.static(fileURLToPath(new URL('../public', import.meta.url)), { index: 'index.html', dotfiles: 'deny' }));
 app.use((error, _req, res, _next) => res.status(error.status || 500).json({ error: error.type === 'entity.too.large' ? 'Request is too large.' : error instanceof SyntaxError ? 'Invalid JSON request.' : 'The request could not be completed.' }));
 const server = app.listen(Number(process.env.PORT) || 3000, host, () => console.log(`Lighthouse SEO Specialist ready at http://${host}:${Number(process.env.PORT) || 3000}`));
