@@ -26,3 +26,15 @@ export function printReport(report) {
   const restore = () => details.forEach((d, i) => { d.open = previous[i]; });
   window.addEventListener('afterprint', restore, { once: true }); window.print();
 }
+
+export async function previewPdf(report,checked){
+ if(!exportToken)throw new Error('Reload the app before generating a PDF.');
+ const preview=window.open('about:blank','_blank');
+ if(preview){preview.document.title='Preparing PDF report';preview.document.body.textContent='Preparing your PDF report…';}
+ try{
+  const response=await fetch('/api/export',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({format:'pdf',token:exportToken,payload:JSON.stringify({report,checked})})});
+  if(!response.ok)throw new Error(await response.text());
+  const {previewUrl}=await response.json();
+  if(preview&&!preview.closed)preview.location.replace(previewUrl);else window.location.assign(previewUrl);
+ }catch(error){preview?.close();throw error;}
+}

@@ -60,3 +60,5 @@ export function createPageSpeedProvider({fetchImpl=fetch,validate=resolvePublic,
     return runs;
   }};
 }
+
+export const shouldRunPageSpeed = (requested, configured) => !!configured && requested !== false;

@@ -1,3 +1,7 @@
+import {buildPdfReport} from '../public/pdf-report.js';
+import {renderPdf} from './pdf.js';
+import {shouldRunPageSpeed} from './integrations/pagespeed.js';
+import {withPageSpeedActions} from '../public/pagespeed-actions.js';
 import {rankSettings,createSearchApiProvider} from './integrations/searchapi.js';
 const searchApi=createSearchApiProvider();
 import express from 'express';
@@ -16,6 +20,7 @@ const host = process.env.HOST || '127.0.0.1';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !process.env.APP_PASSWORD) throw new Error('Set APP_PASSWORD before binding to a non-loopback HOST.');
 const app = express();
 const exportToken = randomBytes(24).toString('hex');
+const pdfPreviews=new Map();
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'"], objectSrc: ["'none'"], upgradeInsecureRequests: null } } }));
 app.use((req, res, next) => {
@@ -39,11 +44,25 @@ app.post('/api/export', rateLimit({windowMs:60000,limit:20,standardHeaders:'draf
     const validTarget=report?.mode==='domain'?Array.isArray(report.target?.pages)&&report.target.pages.length<=50:report?.target?.page&&Array.isArray(report.target?.keywords)&&report.target.keywords.length<=20;
     if (report?.schemaVersion !== 1 || !validTarget || !report.target?.score || !Array.isArray(report.competitors) || report.competitors.length > 5 || !Array.isArray(checked)) return res.status(400).send('Invalid report export.');
     const format = req.body.format;
-    if (!['html','json'].includes(format)) return res.status(400).send('Unsupported export format.');
+    if (!['html','json','pdf'].includes(format)) return res.status(400).send('Unsupported export format.');
+    if(format==='pdf'){
+      const css=await readFile(new URL('../public/styles.css',import.meta.url),'utf8');
+      const logo='data:image/png;base64,'+(await readFile(new URL('../public/assets/lighthouse-logo-white.png',import.meta.url))).toString('base64');
+      const bytes=await renderPdf(buildPdfReport(report,checked,css,logo));
+      for(const [id,item] of pdfPreviews)if(item.expires<Date.now())pdfPreviews.delete(id);
+      while(pdfPreviews.size>=5)pdfPreviews.delete(pdfPreviews.keys().next().value);
+      const id=randomBytes(24).toString('hex');pdfPreviews.set(id,{bytes,expires:Date.now()+15*60000});
+      return res.set('Cache-Control','no-store').json({previewUrl:`/api/pdf-preview/${id}`});
+    }
     const filename = `lighthouse-seo-${report.mode==='domain'?'domain-':''}${new URL(report.target.page?.url||report.target.url).hostname}-${new Date(report.date).toISOString().slice(0,10)}.${format}`;
     const content = format === 'json' ? JSON.stringify({...report,checkedActions:checked},null,2) : buildPrintableHtml(report,checked,await readFile(new URL('../public/styles.css',import.meta.url),'utf8'));
     res.set({'Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'no-store','Content-Type':format==='json'?'application/json; charset=utf-8':'text/html; charset=utf-8'}).send(content);
-  } catch { res.status(400).send('Could not export this report. Reopen it and try again.'); }
+  } catch { res.status(400).send('Could not export this report. For PDF, Microsoft Edge must be installed or PDF_BROWSER_PATH configured. Please retry shortly.'); }
+});
+app.get('/api/pdf-preview/:id',(req,res)=>{
+ const item=pdfPreviews.get(req.params.id);
+ if(!item||item.expires<Date.now()){pdfPreviews.delete(req.params.id);return res.status(404).send('PDF preview expired. Generate it again from the report.');}
+ res.set({'Content-Type':'application/pdf','Content-Disposition':'inline; filename="lighthouse-seo-report.pdf"','Cache-Control':'no-store'}).send(item.bytes);
 });
 app.use(express.json({ limit: '20kb' }));
 app.get('/api/health', (_req, res) => res.set('Cache-Control','no-store').json({ ok: true, aiConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL), pageSpeedConfigured: !!process.env.PAGESPEED_API_KEY, searchApiConfigured: searchApi.isConfigured(), exportToken }));
@@ -65,12 +84,12 @@ app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
   const send = event => { if (!res.destroyed) res.write(`${JSON.stringify(event)}\n`); };
   try {
     const report = await (domain?buildDomainReport:buildReport)(input, message => send({ type: 'progress', message }), controller.signal);
-    if (req.body.includePageSpeed === true) {
+    if (shouldRunPageSpeed(req.body.includePageSpeed, process.env.PAGESPEED_API_KEY)) {
       report.input.includePageSpeed = true;
       report.integrations = await collectIntegrations({ report, signal: controller.signal, emit: message => send({type:'progress',message}) });
     }
     if(rankingOptions){ report.input.rankSettings=rankingOptions; report.rankings=await searchApi.collect({report,settings:rankingOptions,signal:controller.signal,emit:message=>send({type:'progress',message})}); }
-    send({ type: 'report', report });
+    send({ type: 'report', report:withPageSpeedActions(report) });
   } catch (error) { send({ type: 'error', error: controller.signal.aborted ? 'Analysis cancelled or time limit reached.' : error.message }); }
   finally { clearTimeout(deadline); active--; res.end(); }
 });

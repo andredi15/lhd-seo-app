@@ -1,6 +1,7 @@
+import {withPageSpeedActions} from './pagespeed-actions.js';
 import { renderReport, renderHistory, renderSideBySide } from './render.js';
 import { getHistory, saveReport, deleteReport, getChecked, setChecked } from './storage.js';
-import { recommendationText, exportJson, exportHtml, printReport, setExportToken } from './export.js';
+import { recommendationText, exportHtml, previewPdf, setExportToken } from './export.js';
 
 const $ = selector => document.querySelector(selector);
 let currentReport = null; let controller = null; let toastTimer;
@@ -45,6 +46,7 @@ function competitorField(value = '') {
 }
 function labelCompetitors() { document.querySelectorAll('#competitor-inputs input').forEach((input, i) => {input.type=mode==='domain'?'text':'url';input.placeholder=mode==='domain'?'competitor.com':'https://competitor.com/service/';input.setAttribute('aria-label', `Competitor ${mode==='domain'?'domain':'URL'} ${i + 1}`);}); $('#add-competitor').disabled = $('#competitor-inputs').children.length >= 5; }
 function displayReport(report) {
+  report=withPageSpeedActions(report);
   currentReport = report;
   setMode(report.mode||'page',false);
   $('#report').innerHTML = renderReport(report, getChecked(report.id)); $('#report').hidden = false; $('#empty-state').hidden = true; $('#input-details').open = false; screen('analyzer');
@@ -78,7 +80,7 @@ $('#analyze-form').addEventListener('submit', async event => {
     if (!received) throw new Error('The connection closed before a report arrived. Please try again.');
     $('#report').scrollIntoView({ behavior:'smooth', block:'start' });
   } catch (err) { error(err.name === 'AbortError' ? 'Analysis cancelled. You can start a new analysis when ready.' : err.message); if (currentReport) $('#report').hidden = false; else $('#empty-state').hidden = false; }
-  finally { controller = null; document.querySelectorAll('[data-mode]').forEach(b=>{b.disabled=false;});$('#analyze-button').disabled = false; $('#analyze-button').innerHTML = `${mode==='domain'?'Analyze Domain':'Analyze SEO'} <span aria-hidden="true">↗</span>`; $('#analysis-progress').hidden = true; }
+  finally { $('#include-pagespeed').checked=!$('#include-pagespeed').disabled; controller = null; document.querySelectorAll('[data-mode]').forEach(b=>{b.disabled=false;});$('#analyze-button').disabled = false; $('#analyze-button').innerHTML = `${mode==='domain'?'Analyze Domain':'Analyze SEO'} <span aria-hidden="true">↗</span>`; $('#analysis-progress').hidden = true; }
 });
 document.addEventListener('click', async event => {
   const button = event.target.closest('button'); if (!button) return;
@@ -102,9 +104,8 @@ document.addEventListener('click', async event => {
   const checked = [...document.querySelectorAll('[data-action-id]:checked')].map(i => i.dataset.actionId);
   try {
     if (button.id === 'copy-recommendations') await copyText(recommendationText(currentReport, checked));
-    if (button.id === 'export-json') exportJson(currentReport, checked);
     if (button.id === 'export-html') await exportHtml(currentReport, checked);
-    if (button.id === 'export-print') printReport(currentReport);
+    if (button.id === 'export-pdf') {button.disabled=true;button.textContent='Preparing PDF…';try{await previewPdf(currentReport,checked);}finally{button.disabled=false;button.textContent='PDF Report';}}
   } catch (err) { toast(err.message || 'Export failed. Please try again.'); }
 });
 document.addEventListener('change', event => {

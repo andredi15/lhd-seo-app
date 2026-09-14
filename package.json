@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Evidence-led page SEO analysis for Lighthouse Digital",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "node --watch --env-file-if-exists=.env server/index.js",
@@ -20,6 +22,7 @@
     "helmet": "^8.1.0",
     "iconv-lite": "^0.7.0",
     "ipaddr.js": "^2.2.0",
+    "playwright-core": "^1.63.0",
     "robots-parser": "^3.0.1"
   }
 }

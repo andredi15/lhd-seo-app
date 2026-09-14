@@ -1,3 +1,4 @@
+import {withPageSpeedActions} from './pagespeed-actions.js';
 import {esc,safeUrl} from './html.js';
 const normalize=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const present=(text,phrase)=>phrase&&(` ${normalize(text)} `).includes(` ${normalize(phrase)} `);
@@ -34,6 +35,7 @@ export function explainIssue(issue,page,keyword='') {
  return {...issue,why:describe(issue,page),comparison:{current,suggested,label,note,url:page.url}};
 }
 export function explainReport(report){
+ report=withPageSpeedActions(report);
  if(report.mode==='domain')return {...report,target:{...report.target,issues:report.target.issues.map(i=>{const examples=(i.affectedUrls||[]).slice(0,3).map(url=>report.target.pages.find(p=>p.url===url)).filter(Boolean).map(p=>explainIssue(i,p,report.input.keywords[0]||''));return {...i,why:examples[0]?.why||i.why,examples:examples.map(e=>e.comparison)};})}};
  return {...report,target:{...report.target,issues:report.target.issues.map(i=>explainIssue(i,report.target.page,report.input.keywords[0]||''))}};
 }
