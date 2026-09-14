@@ -5,8 +5,11 @@ import { recommendationText, exportJson, exportHtml, printReport, setExportToken
 const $ = selector => document.querySelector(selector);
 let currentReport = null; let controller = null; let toastTimer;
 let mode='page'; const formDrafts={page:null,domain:null};
-function formValues(){return {targetUrl:$('#target-url').value,keywords:$('#keywords').value,competitorUrls:[...document.querySelectorAll('#competitor-inputs input')].map(i=>i.value),crawlLimit:$('#crawl-limit').value};}
-function fillValues(value){$('#target-url').value=value.targetUrl||'';$('#keywords').value=value.keywords||'';$('#crawl-limit').value=String(value.crawlLimit||25);$('#competitor-inputs').replaceChildren();(value.competitorUrls?.length?value.competitorUrls:['']).forEach(competitorField);}
+function formValues(){return {targetUrl:$('#target-url').value,keywords:$('#keywords').value,competitorUrls:[...document.querySelectorAll('#competitor-inputs input')].map(i=>i.value),crawlLimit:$('#crawl-limit').value,rankSettings:$('#include-rankings').checked?{location:$('#rank-location').value,country:$('#rank-country').value,language:$('#rank-language').value,device:$('#rank-device').value}:null};}
+function fillValues(value){$('#target-url').value=value.targetUrl||'';$('#keywords').value=value.keywords||'';$('#crawl-limit').value=String(value.crawlLimit||25);$('#competitor-inputs').replaceChildren();(value.competitorUrls?.length?value.competitorUrls:['']).forEach(competitorField);
+ const rs=value.rankSettings;$('#include-rankings').checked=!!rs&&!$('#include-rankings').disabled;$('#ranking-settings').hidden=!$('#include-rankings').checked;
+ $('#rank-location').value=rs?.location||'';$('#rank-country').value=rs?.country||'ca';$('#rank-language').value=rs?.language||'en';$('#rank-device').value=rs?.device||'mobile';rankingBudget();}
+
 function setMode(next,restore=true) {
   if(controller&&next!==mode)return;
   if(restore&&next!==mode){formDrafts[mode]=formValues();mode=next;fillValues(formDrafts[next]||{});}else mode=next;
@@ -55,7 +58,7 @@ $('#nav-method').addEventListener('click', () => screen('method'));
 $('#cancel-analysis').addEventListener('click', () => controller?.abort());
 $('#analyze-form').addEventListener('submit', async event => {
   event.preventDefault(); if (controller) return;
-  const input = { mode,includePageSpeed: $('#include-pagespeed').checked,targetUrl: $('#target-url').value.trim(), keywords: $('#keywords').value, competitorUrls: [...document.querySelectorAll('#competitor-inputs input')].map(i => i.value.trim()).filter(Boolean),...(mode==='domain'?{crawlLimit:Number($('#crawl-limit').value)}:{}) };
+  const input = { mode,includeRankings:$('#include-rankings').checked,rankSettings:{location:$('#rank-location').value,country:$('#rank-country').value,language:$('#rank-language').value,device:$('#rank-device').value},includePageSpeed: $('#include-pagespeed').checked,targetUrl: $('#target-url').value.trim(), keywords: $('#keywords').value, competitorUrls: [...document.querySelectorAll('#competitor-inputs input')].map(i => i.value.trim()).filter(Boolean),...(mode==='domain'?{crawlLimit:Number($('#crawl-limit').value)}:{}) };
   controller = new AbortController();
   document.querySelectorAll('[data-mode]').forEach(b=>{b.disabled=true;});
   $('#analyze-button').disabled = true; $('#analyze-button').textContent = 'Analyzing…'; $('#analysis-progress').hidden = false; $('#progress-stages').replaceChildren(); $('#progress-current').textContent = 'Connecting to analyzer'; $('#error').hidden = true; $('#report').hidden = true; $('#empty-state').hidden = true;
@@ -87,13 +90,21 @@ document.addEventListener('click', async event => {
   if (button.dataset.copy !== undefined) await copyText(button.dataset.copy);
   if (button.dataset.openReport) { const report = getHistory().find(r => r.id === button.dataset.openReport); if (report) { displayReport(report); populate(report); $('#report').scrollIntoView(); } }
   if (button.dataset.deleteReport) { try { deleteReport(button.dataset.deleteReport); updateHistory(); toast('Report removed from local history'); } catch { toast('Browser storage is unavailable.'); } }
+  if (button.dataset.rankCompetitor) {
+    const url=mode==='domain'?new URL(button.dataset.rankCompetitor).origin:button.dataset.rankCompetitor;
+    const inputs=[...document.querySelectorAll('#competitor-inputs input')];
+    if(inputs.some(i=>i.value===url)){toast('Already in your comparison inputs');return;}
+    const blank=inputs.find(i=>!i.value.trim());
+    if(blank)blank.value=url;else if(inputs.length<5)competitorField(url);else{toast('Remove a competitor first; the limit is five.');return;}
+    $('#input-details').open=true;toast('Added for your next analysis');return;
+  }
   if (!currentReport) return;
   const checked = [...document.querySelectorAll('[data-action-id]:checked')].map(i => i.dataset.actionId);
   try {
     if (button.id === 'copy-recommendations') await copyText(recommendationText(currentReport, checked));
     if (button.id === 'export-json') exportJson(currentReport, checked);
     if (button.id === 'export-html') await exportHtml(currentReport, checked);
-    if (button.id === 'export-print') printReport();
+    if (button.id === 'export-print') printReport(currentReport);
   } catch (err) { toast(err.message || 'Export failed. Please try again.'); }
 });
 document.addEventListener('change', event => {
@@ -104,5 +115,9 @@ document.addEventListener('keydown', event => {
   if (!event.target.matches('[role=tab]') || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
   event.preventDefault(); const buttons = [...document.querySelectorAll('[role=tab]')]; const index = buttons.indexOf(event.target); const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length; buttons[next].click(); buttons[next].focus();
 });
-fetch('/api/health').then(r => r.json()).then(data => { setExportToken(data.exportToken); $('#include-pagespeed').disabled=!data.pageSpeedConfigured; $('#include-pagespeed').checked=!!data.pageSpeedConfigured; $('#pagespeed-status').textContent=data.pageSpeedConfigured?'Connected':'Requires server API key'; $('#engine-status').textContent = data.aiConfigured ? 'AI + rules ready' : 'Rules engine ready'; }).catch(() => { $('#engine-status').textContent = 'Engine unavailable'; });
+fetch('/api/health').then(r => r.json()).then(data => { setExportToken(data.exportToken); $('#include-rankings').disabled=!data.searchApiConfigured; $('#rankings-status').textContent=data.searchApiConfigured?'Connected':'Requires server API key'; $('#include-pagespeed').disabled=!data.pageSpeedConfigured; $('#include-pagespeed').checked=!!data.pageSpeedConfigured; $('#pagespeed-status').textContent=data.pageSpeedConfigured?'Connected':'Requires server API key'; $('#engine-status').textContent = data.aiConfigured ? 'AI + rules ready' : 'Rules engine ready'; }).catch(() => { $('#engine-status').textContent = 'Engine unavailable'; });
 competitorField(); updateHistory();
+
+$('#include-rankings').addEventListener('change',()=>{$('#ranking-settings').hidden=!$('#include-rankings').checked;});
+function rankingBudget(){const count=Math.min(5,new Set($('#keywords').value.split(/[\n,]+/).map(k=>k.trim().toLowerCase()).filter(Boolean)).size);$('#ranking-budget').textContent=`Manual check: up to ${count} SearchApi requests for the first ${count} keywords. Usage may be billable; identical checks are cached for one hour. No scheduled tracking.`;}
+$('#keywords').addEventListener('input',rankingBudget);

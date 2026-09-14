@@ -1,3 +1,4 @@
+import {rankingSummary} from './rankings.js';
 import {explainReport} from './recommendation-examples.js';
 import { esc, renderReport } from './render.js';
 let exportToken = '';
@@ -15,10 +16,12 @@ function downloadReport(report, checked, format) {
 export function exportJson(report, checked) { downloadReport(report, checked, 'json'); }
 export function exportHtml(report, checked) { downloadReport(report, checked, 'html'); }
 export function buildPrintableHtml(report, checked, css = '') {
-  const reportMarkup = renderReport(report, checked).replaceAll('<details', '<details open');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lighthouse SEO Report — ${esc(new URL(report.target.page?.url||report.target.url).hostname)}</title><style>${css}\n.report-actions,.tabs,.copy-button,.subheading select,.sr-only{display:none!important}.tab-panel[hidden]{display:block!important}.tab-panel{margin:30px 0}.print-only{display:block}.workspace{margin:0}main{max-width:1200px}body{background:#fff}</style></head><body><main><p class="eyebrow">LIGHTHOUSE DIGITAL · SEO SPECIALIST</p><div id="report">${reportMarkup}</div><p class="caption">Static export. All report sections are included. Checkbox state reflects the exported report; edits to this file do not sync to the app.</p></main></body></html>`;
+  const reportMarkup = renderReport({...report,rankings:undefined}, checked).replaceAll('<details', '<details open');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lighthouse SEO Report — ${esc(new URL(report.target.page?.url||report.target.url).hostname)}</title><style>${css}\n.report-actions,.tabs,.copy-button,.subheading select,.sr-only{display:none!important}.tab-panel[hidden]{display:block!important}.tab-panel{margin:30px 0}.print-only{display:block}.workspace{margin:0}main{max-width:1200px}body{background:#fff}</style></head><body><main><p class="eyebrow">LIGHTHOUSE DIGITAL · SEO SPECIALIST</p><div id="report">${reportMarkup}${rankingSummary(report)}</div><p class="caption">Static export. All report sections are included. Checkbox state reflects the exported report; edits to this file do not sync to the app.</p></main></body></html>`;
 }
-export function printReport() {
+export function printReport(report) {
+  const compact=document.createElement('div');compact.className='print-only';compact.innerHTML=rankingSummary(report||{});document.querySelector('#report').append(compact);
+  window.addEventListener('afterprint',()=>compact.remove(),{once:true});
   const details = [...document.querySelectorAll('#report details')]; const previous = details.map(d => d.open); details.forEach(d => { d.open = true; });
   const restore = () => details.forEach((d, i) => { d.open = previous[i]; });
   window.addEventListener('afterprint', restore, { once: true }); window.print();

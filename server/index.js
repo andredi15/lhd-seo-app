@@ -1,3 +1,5 @@
+import {rankSettings,createSearchApiProvider} from './integrations/searchapi.js';
+const searchApi=createSearchApiProvider();
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -44,15 +46,15 @@ app.post('/api/export', rateLimit({windowMs:60000,limit:20,standardHeaders:'draf
   } catch { res.status(400).send('Could not export this report. Reopen it and try again.'); }
 });
 app.use(express.json({ limit: '20kb' }));
-app.get('/api/health', (_req, res) => res.set('Cache-Control','no-store').json({ ok: true, aiConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL), pageSpeedConfigured: !!process.env.PAGESPEED_API_KEY, exportToken }));
+app.get('/api/health', (_req, res) => res.set('Cache-Control','no-store').json({ ok: true, aiConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL), pageSpeedConfigured: !!process.env.PAGESPEED_API_KEY, searchApiConfigured: searchApi.isConfigured(), exportToken }));
 app.use('/api/analyze', rateLimit({ windowMs: 60000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many analyses. Try again in a minute.' } }));
 let active = 0;
 app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
   const origin = req.headers.origin;
   if (origin) { try { if (new URL(origin).host !== req.headers.host) return res.status(403).json({ error: 'Cross-origin analysis requests are not allowed.' }); } catch { return res.status(403).json({ error: 'Invalid origin.' }); } }
-  let input;
+  let input, rankingOptions;
   const domain=req.path==='/api/analyze/domain'||req.body?.mode==='domain';
-  try { input = domain?validateDomainInput(req.body):validateInput(req.body); } catch (error) { return res.status(400).json({ error: error.message }); }
+  try { input = domain?validateDomainInput(req.body):validateInput(req.body); rankingOptions=rankSettings(req.body,input.keywords); } catch (error) { return res.status(400).json({ error: error.message }); }
   if (active >= 2) return res.status(429).json({ error: 'Two analyses are already running. Please try again shortly.' });
   active++;
   const controller = new AbortController();
@@ -67,6 +69,7 @@ app.post(['/api/analyze','/api/analyze/domain'], async (req, res) => {
       report.input.includePageSpeed = true;
       report.integrations = await collectIntegrations({ report, signal: controller.signal, emit: message => send({type:'progress',message}) });
     }
+    if(rankingOptions){ report.input.rankSettings=rankingOptions; report.rankings=await searchApi.collect({report,settings:rankingOptions,signal:controller.signal,emit:message=>send({type:'progress',message})}); }
     send({ type: 'report', report });
   } catch (error) { send({ type: 'error', error: controller.signal.aborted ? 'Analysis cancelled or time limit reached.' : error.message }); }
   finally { clearTimeout(deadline); active--; res.end(); }

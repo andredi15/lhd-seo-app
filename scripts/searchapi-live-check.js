@@ -1,0 +1,13 @@
+import {writeFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const input={targetUrl:'https://example.com/',keywords:'example domain',competitorUrls:[],includeRankings:true,includePageSpeed:false,rankSettings:{location:'',country:'ca',language:'en',device:'mobile'}};
+const response=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});
+assert.equal(response.status,200);
+const events=(await response.text()).trim().split('\n').map(line=>JSON.parse(line));
+const report=events.find(e=>e.type==='report')?.report;
+if(!report)throw new Error(events.find(e=>e.type==='error')?.error||'No report');
+await writeFile('artifacts/searchapi-live-report.json',JSON.stringify(report,null,2));
+const run=report.rankings.runs[0];
+console.log(JSON.stringify({source:report.rankings.source,error:run.error,returned:run.returned,position:run.targetPage?.position,location:run.locationUsed,checkedAt:run.checkedAt}));
+assert.ok(!run.error,'Live ranking check did not succeed');
+assert.ok(run.returned>0);

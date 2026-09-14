@@ -169,3 +169,13 @@ Page mode tests the target URL on mobile and desktop. Domain mode tests the firs
 Results include Lighthouse performance, accessibility, best-practices and SEO scores, FCP, LCP, Speed Index, TBT, CLS and a selection of failing diagnostics. These are simulated **lab results**, separate from the app’s heuristic scores; TBT is not INP. Real-user Core Web Vitals are not collected here. A future CrUX integration can add them with explicit page/origin scope and coverage labels. No missing metric is converted to zero.
 
 The page report deadline is ten minutes when including optional integrations. Official API documentation: https://developers.google.com/speed/docs/insights/v5/get-started .
+
+### Manual Google rankings (SearchApi.io)
+
+Set `SEARCHAPI_API_KEY` in `.env` and restart. **Check Google rankings** is optional and off by default in Page and Domain Analysis. Choose country (Canada, US, UK or Australia), English/French, mobile/desktop and an optional city/location. Checks use the first five supplied keywords at most; no scheduled or background tracking runs. Usage may be billable under your SearchApi plan. Each keyword requests up to 100 organic results once; client and competitor positions share that response. Successful identical searches are cached in memory for one hour (100 entries), including across targets. Restarting clears this cache.
+
+The Rankings tab distinguishes the target page from the domain’s best-ranking page and includes timestamp, location used, device, returned-result count and search depth. Matching treats www and non-www as equivalent, excludes other subdomains, ignores URL fragments/trailing slashes, and retains query strings. No result is not an indexing verdict. API errors produce unavailable results, never a score of zero. Rank data does not change the existing SEO scores. Top competing results can be added to the next crawl without making additional search requests.
+
+Snapshots are stored with existing browser report history (last 10 reports); there are no scheduled checks or trend calculations. HTML and Print/PDF exports include only the compact ranking summary; JSON retains the full saved snapshot. Search result snippets are not used as proof of a page’s content.
+
+The backend uses Bearer authentication, a 95-second request timeout, sequential checks and stops subsequent requests on authentication/quota failures. API credentials and upstream error bodies are never included in reports. The isolated provider is `server/integrations/searchapi.js`. Tests use fixtures; `node scripts/searchapi-live-check.js` explicitly performs one manual live query through the running app and writes an ignored artifact.

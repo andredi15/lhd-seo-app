@@ -139,3 +139,7 @@
 @media print{.psi-gauges{grid-template-columns:repeat(4,minmax(0,1fr));}.psi-gauge-card,.psi-metric{break-inside:avoid;}.psi-gauge{width:88px;height:88px;}.psi-gauge-value strong{font-size:26px;}.psi-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.psi-rating{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}
 
 .recommendation-example {margin:16px 0;break-inside:avoid;} .recommendation-example .draft-content {grid-template-columns:1fr;} .recommendation-example .draft-content p {white-space:pre-wrap;} .recommendation-example .caption {margin:9px 0;} .issue-number {display:inline-block;margin-right:12px;}
+
+.ranking-settings{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;margin-top:16px}.ranking-settings input,.ranking-settings select{width:100%;min-width:0}.ranking-settings label{min-width:0}.ranking-settings>p{grid-column:1/-1}.ranking-summary td{overflow-wrap:anywhere}.ranking-summary small{font-size:11px}
+@media(max-width:760px){.ranking-settings{grid-template-columns:1fr 1fr}}
+@media print{.rank-discovery{display:none!important}.tab-panel:has(.ranking-summary){display:none!important}}
