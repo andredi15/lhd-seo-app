@@ -19,6 +19,7 @@ export function createPublicRouter(){
  const prune=()=>{for(const [id,r]of reports)if(r.expires<Date.now())reports.delete(id);};
  const asset=name=>new URL(`../public/${name}`,import.meta.url);
  const sendAsset=name=>async(_req,res,next)=>{try{res.sendFile(fileURLToPath(asset(name)));}catch(e){next(e);}};
+ if(process.env.PUBLIC_SITE_MODE==='true')router.get('/',(_req,res)=>res.redirect(302,'/audit'));
  router.get(['/audit','/audit/'],sendAsset('audit.html'));
  for(const file of ['styles.css','visitor.js','visitor.css','audit-presentation.js','html.js','pagespeed-overview.js','pagespeed-presentation.js','recommendation-examples.js','pagespeed-actions.js'])router.get(`/audit-assets/${file}`,sendAsset(file));
  router.get('/audit-assets/logo.png',sendAsset('assets/lighthouse-logo-white.png'));

@@ -205,4 +205,19 @@ Reports are held in memory for 30 minutes (maximum 20); opaque random report IDs
 
 Set `PUBLIC_BOOKING_URL` to the actual consultation link; the default goes to Lighthouse Digital's homepage. Once hosted with HTTPS, set your GoHighLevel form's on-submit redirect to `https://YOUR-AUDIT-HOST/audit`. This is a redirect, not an access gate, and does not transmit contact details or create CRM records. GoHighLevel remains responsible for your lead form. Hosting/DNS and the actual GoHighLevel form redirect have not been configured by this local implementation.
 
+### Render deployment
+
+Create a **Web Service** from the repository and select the Docker runtime. The included `Dockerfile` installs Chromium for PDF previews and binds the server to Render's injected `PORT`. Use `/public-api/config` as the health-check path.
+
+Configure these environment variables in Render rather than committing a `.env` file:
+
+- `APP_PASSWORD`: a strong private password for the agency workspace; the Basic Auth username is `lighthouse`.
+- `PAGESPEED_API_KEY`: the restricted Google PageSpeed Insights key used by public scans.
+- `PUBLIC_SITE_MODE=true`: opens the simplified audit from the service's root URL.
+- `PUBLIC_BOOKING_URL=https://lighthousedigitalhq.com/contact/`
+- `PUBLIC_DAILY_SCAN_LIMIT=20`
+- `TRUST_PROXY_HOPS=1`
+
+`HOST`, `PORT`, and `PDF_BROWSER_PATH` do not need Render dashboard values: the container supplies the host and browser path, and Render supplies the port. `SEARCHAPI_API_KEY`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are optional and are not used by the simplified public audit.
+
 `node scripts/public-check.js` checks public/private route separation, asset delivery, origin checks and scan rate limits using a separate password-protected test server. Unit tests cover public input bounds; desktop/mobile layout and a real public scan/PDF flow were checked locally.
