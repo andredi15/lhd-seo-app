@@ -15,3 +15,10 @@ test('Examples escape source markup and retain original report observations',()=
  const malicious={...page,title:'<script>alert(1)</script>'};const report={input:{keywords:['landscaping']},target:{page:malicious,issues:[{id:'title-topic',element:'Title'}]}};
  const result=explainReport(report);assert.equal(report.target.issues[0].comparison,undefined);assert.equal(result.target.page.title,malicious.title);assert.ok(!renderIssueExamples(result.target.issues[0]).includes('<script>'));
 });
+test('Short-page domain recommendations use plain language and page-specific review prompts',()=>{
+ const issue=explainIssue({id:'domain-thin',element:'Domain',evidence:'https://example.com/form',why:'Technical wording',fix:'Add content'},page);
+ assert.match(issue.why,/about 12 words/);assert.match(issue.why,/not automatically a problem/);
+ assert.equal(issue.comparison.current,'About 12 words found. Main topic: Welcome');
+ assert.match(issue.comparison.suggested,/what this page is for/);assert.equal(issue.comparison.copyable,false);
+ const html=renderIssueExamples({...issue,examples:[issue.comparison]});assert.ok(!html.includes('>Copy<'));assert.ok(!html.includes('Technical wording'));
+});
