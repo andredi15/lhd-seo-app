@@ -9,11 +9,11 @@ test('report email validation accepts normal addresses and rejects missing or un
 
 test('Resend provider sends the generated PDF as a server-side attachment',async()=>{
  let request;
- const provider=createReportEmailProvider({apiKey:'secret-key',from:'Lighthouse <reports@example.com>',replyTo:'hello@example.com',fetchImpl:async(url,options)=>{request={url,options};return {ok:true,json:async()=>({id:'email_123'})};}});
+ const provider=createReportEmailProvider({apiKey:'secret-key',from:'Lighthouse <reports@example.com>',replyTo:'hello@example.com',bookingUrl:'https://example.com/book',fetchImpl:async(url,options)=>{request={url,options};return {ok:true,json:async()=>({id:'email_123'})};}});
  const report={id:'report-123',target:{url:'https://example.com/',score:{overall:77}},summary:{nextMove:'Clarify the main service.'}};
  const result=await provider.send({to:'person@example.com',report,pdf:Buffer.from('pdf bytes')});
  assert.equal(result.id,'email_123');assert.equal(request.url,'https://api.resend.com/emails');assert.equal(request.options.headers.Authorization,'Bearer secret-key');
- const body=JSON.parse(request.options.body);assert.deepEqual(body.to,['person@example.com']);assert.equal(body.reply_to,'hello@example.com');assert.equal(body.attachments[0].content,Buffer.from('pdf bytes').toString('base64'));assert.ok(!request.options.body.includes('secret-key'));
+ const body=JSON.parse(request.options.body);assert.deepEqual(body.to,['person@example.com']);assert.equal(body.reply_to,'hello@example.com');assert.equal(body.attachments[0].content,Buffer.from('pdf bytes').toString('base64'));assert.match(body.html,/Book a free call/);assert.match(body.html,/https:\/\/example.com\/book/);assert.match(body.text,/https:\/\/example.com\/book/);assert.ok(!request.options.body.includes('secret-key'));
 });
 
 test('email delivery failures use a client-safe message',async()=>{

@@ -220,6 +220,7 @@ Configure these environment variables in Render rather than committing a `.env` 
 - `RESEND_API_KEY`: a server-side Resend API key with permission to send transactional email.
 - `PUBLIC_REPORT_FROM_EMAIL=Lighthouse Digital <reports@your-verified-domain.example>`: sender on a domain verified in Resend.
 - `PUBLIC_REPORT_REPLY_TO`: optional monitored reply address.
+- `PUBLIC_REPORT_BOOKING_URL`: optional call-booking link shown in the report email; defaults to the Lighthouse Digital booking widget.
 
 `HOST`, `PORT`, and `PDF_BROWSER_PATH` do not need Render dashboard values: the container supplies the host and browser path, and Render supplies the port. `SEARCHAPI_API_KEY`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are optional and are not used by the simplified public audit.
 
