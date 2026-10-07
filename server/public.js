@@ -32,11 +32,11 @@ export function createPublicRouter(){
  const limit=Number(process.env.PUBLIC_DAILY_SCAN_LIMIT)||20;
  const prune=()=>{for(const [id,r]of reports)if(r.expires<Date.now())reports.delete(id);};
  const asset=name=>new URL(`../public/${name}`,import.meta.url);
- const sendAsset=name=>async(_req,res,next)=>{try{res.sendFile(fileURLToPath(asset(name)));}catch(e){next(e);}};
+ const sendAsset=(name,cache='no-cache, must-revalidate')=>async(_req,res,next)=>{try{res.set('Cache-Control',cache).sendFile(fileURLToPath(asset(name)));}catch(e){next(e);}};
  if(process.env.PUBLIC_SITE_MODE==='true')router.get('/',(_req,res)=>res.redirect(302,'/audit'));
  router.get(['/audit','/audit/'],sendAsset('audit.html'));
  for(const file of ['styles.css','visitor.js','visitor.css','audit-presentation.js','html.js','pagespeed-overview.js','pagespeed-presentation.js','recommendation-examples.js','pagespeed-actions.js'])router.get(`/audit-assets/${file}`,sendAsset(file));
- router.get('/audit-assets/logo.png',sendAsset('assets/lighthouse-logo-white.png'));
+ router.get('/audit-assets/logo.png',sendAsset('assets/lighthouse-logo-white.png','public, max-age=86400'));
  router.get('/public-api/config',(_req,res)=>res.set('Cache-Control','no-store').json({pageSpeed:!!process.env.PAGESPEED_API_KEY,bookingUrl:process.env.PUBLIC_BOOKING_URL||'https://lighthousedigitalhq.com/contact/'}));
  router.use('/public-api',express.json({limit:'8kb'}),(req,res,next)=>{
   if(req.method==='POST'){let same=false;try{same=!!req.headers.origin&&new URL(req.headers.origin).host===req.headers.host;}catch{}if(!same)return res.status(403).json({error:'Please submit your scan from the audit page.'});}next();
