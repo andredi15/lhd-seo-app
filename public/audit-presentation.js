@@ -13,6 +13,26 @@ export function keywordPlacement(page,keywords){
  const columns=[['Title',page.title],['Meta description',page.description],['H1',page.h1.join(' ')],['H2 / H3',[...page.h2,...page.h3].join(' ')],['Opening copy',page.intro],['Body',page.body]];
  return `<section class="card placement-card"><h2>Keyword Placement at a Glance</h2><p class="caption">Where your chosen keywords appear in the retrieved page.</p><div class="audit-legend">${statusMark('pass','Phrase found')}${statusMark('review','Some words found')}${statusMark('fail','Phrase not found')}</div><div class="table-wrap"><table class="placement-table"><thead><tr><th scope="col">Target keyword</th>${columns.map(([name])=>`<th scope="col">${name}</th>`).join('')}</tr></thead><tbody>${keywords.map(k=>`<tr><th scope="row">${esc(k.keyword||k)}</th>${columns.map(([name,text])=>`<td>${statusMark(placement(text,k.keyword||k))}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="caption">Checks ignore case, accents and punctuation. “Review” means some words appear, not necessarily together or with the same meaning. A red cross is a placement observation, not an SEO failure. Natural alternatives can work; do not repeat every keyword in every section.</p></section>`;
 }
+const commonWords=new Set('a an the of for and or to in at by with near me my your our'.split(' '));
+const phraseCount=(text,phrase)=>{const hay=` ${normalize(text)} `,needle=normalize(phrase);return needle?hay.split(` ${needle} `).length-1:0;};
+export function domainKeywordCoverage(pages,keywords){
+ if(!keywords?.length)return `<section class="topic-match"><h2>Does your website reflect what you offer?</h2><p>No services, topics or locations were entered, so we could not compare your website with your business focus. Add up to three on your next review if you would like this check.</p></section>`;
+ const home=pages[0];
+ const cards=keywords.map(value=>{
+  const keyword=value.keyword||value,words=normalize(keyword).split(' ').filter(w=>w&&!commonWords.has(w));
+  const rows=pages.map(p=>{const count=phraseCount(p.body,keyword),all=normalize(`${p.title} ${p.h1.join(' ')} ${p.h2.join(' ')} ${p.h3.join(' ')} ${p.body}`),matched=words.filter(w=>` ${all} `.includes(` ${w} `)).length;return {p,count,density:count*words.length/Math.max(1,p.wordCount)*100,related:words.length?matched/words.length:0};});
+  const exactPages=rows.filter(r=>r.count>0),relatedPages=rows.filter(r=>r.related>=.6),total=exactPages.reduce((n,r)=>n+r.count,0),highest=rows.reduce((a,b)=>b.density>a.density?b:a,rows[0]);
+  const title=placement(home.title,keyword),h1=placement(home.h1.join(' '),keyword),body=placement(home.body,keyword);
+  const repetitive=highest.count>=8&&highest.density>3;
+  const clear=!repetitive&&(title==='pass'||h1==='pass'||exactPages.length>=Math.min(2,pages.length));
+  const partial=!repetitive&&!clear&&(exactPages.length||relatedPages.length);
+  const status=repetitive?'review':clear?'pass':partial?'review':'fail',label=repetitive?'Check repetition':clear?'Clear match':partial?'Some matching language':'Not clearly found';
+  const locations=[title==='pass'?'page title':'',h1==='pass'?'main heading':'',body==='pass'?'page text':''].filter(Boolean);
+  const explanation=repetitive?`This wording appears often on one page. Read it aloud and replace unnecessary repetition with clear, natural language.`:clear?`Visitors can find a clear connection between this offering and the reviewed website.`:partial?`Some related wording appears, but the connection could be clearer on the most relevant service page.`:`We did not find this exact wording or a strong combination of its main words. A natural alternative may still be present, so review the relevant page before changing it.`;
+  return `<article class="topic-match-card"><div class="topic-match-heading"><h3>${esc(keyword)}</h3>${statusMark(status,label)}</div><p>${esc(explanation)}</p><ul><li>${exactPages.length} of ${pages.length} reviewed pages use the exact wording.</li><li>${total} exact mention${total===1?'':'s'} across page text.</li><li>Homepage: ${locations.length?`found in ${esc(locations.join(', '))}`:'exact wording not found in the title, main heading or page text'}.</li><li>${total?`Highest use on one page: ${highest.density.toFixed(1)}% of its words.`:'No exact-phrase percentage is available.'}</li></ul>${highest?.count?`<p class="caption">Most frequent page: ${esc(highest.p.title||highest.p.h1[0]||highest.p.url)}</p>`:''}</article>`;
+ }).join('');
+ return `<section class="topic-match"><h2>Does your website reflect what you offer?</h2><p>We compared the services, topics or locations you entered with the words found across the reviewed pages. Percentages describe what we observed; there is no ideal keyword-density target, and repeating a phrase more often does not automatically improve SEO.</p><div class="topic-match-grid">${cards}</div></section>`;
+}
 export function pageCheckRows(p){
  const missing=p.images.filter(i=>i.alt===null).length;
  const rows=[
