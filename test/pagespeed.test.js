@@ -11,7 +11,9 @@ test('PageSpeed preserves unavailable metrics and zero, with distinct lab proven
   assert.throws(()=>parsePageSpeed({lighthouseResult:{runtimeError:{code:'FAILED'}}},'https://example.com/','mobile'));
 });
 test('Domain PageSpeed samples no more than homepage and one service page',()=>{
-  assert.deepEqual(selectPageSpeedUrls({mode:'domain',target:{pages:[{url:'https://example.com/'},...['a','b','c'].map(p=>({url:`https://example.com/${p}`,classification:{categories:['Core services']}}))]}}),['https://example.com/','https://example.com/a']);
+  const report={mode:'domain',target:{pages:[{url:'https://example.com/'},...['a','b','c'].map(p=>({url:`https://example.com/${p}`,classification:{categories:['Core services']}}))]}};
+  assert.deepEqual(selectPageSpeedUrls(report),['https://example.com/','https://example.com/a']);
+  assert.deepEqual(selectPageSpeedUrls({...report,publicLite:true}),['https://example.com/']);
 });
 test('PageSpeed caches successful strategies and isolates quota/configuration errors',async()=>{
   let calls=0;

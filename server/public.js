@@ -3,15 +3,29 @@ import express from 'express';
 import {rateLimit} from 'express-rate-limit';
 import {randomBytes} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {validateInput,buildReport} from './report.js';
+import {validateDomainInput} from './domain/discovery.js';
+import {buildDomainReport} from './domain/report.js';
 import {collectIntegrations} from './integrations/index.js';
 import {withPageSpeedActions} from '../public/pagespeed-actions.js';
 import {buildPdfReport} from '../public/pdf-report.js';
 import {renderPdf} from './pdf.js';
 export function publicInput(body){
- const input=validateInput({targetUrl:body?.targetUrl,keywords:body?.keywords,competitorUrls:[]});
- if(input.keywords.length>3)throw new Error('Choose up to three search phrases for this review.');
+ const input=validateDomainInput({targetDomain:body?.targetUrl,keywords:body?.keywords,competitorDomains:[],crawlLimit:10});
+ if(input.keywords.length>3)throw new Error('Choose up to three services, topics or locations for this review.');
  return input;
+}
+export function publicLiteReport(report){
+ const priorities=report.target.issues;
+ const action=(issue)=>({id:issue.id,text:issue.issue,detail:issue.fix});
+ return {...report,publicLite:true,summary:{
+  strengths:report.summary.strengths.slice(0,3),
+  weaknesses:report.summary.weaknesses.slice(0,3),
+  nextMove:priorities[0]?.fix||'Use the retrieved site sample to choose one useful improvement, then re-check it after publishing.'
+ },actionPlan:{
+  'Fix First':priorities.filter(i=>['Critical','High Impact'].includes(i.priority)).slice(0,3).map(action),
+  Next:priorities.filter(i=>i.priority==='Medium Impact').slice(0,4).map(action),
+  Ongoing:[{id:'public-domain-recheck',text:'Re-check the website after meaningful changes',detail:'Use the same 10-page sample as a comparison point. Crawl results are not indexed-page counts.'}]
+ }};
 }
 export function createPublicRouter(){
  const router=express.Router(),reports=new Map();let active=false,day='',used=0;
@@ -27,17 +41,18 @@ export function createPublicRouter(){
  router.use('/public-api',express.json({limit:'8kb'}),(req,res,next)=>{
   if(req.method==='POST'){let same=false;try{same=!!req.headers.origin&&new URL(req.headers.origin).host===req.headers.host;}catch{}if(!same)return res.status(403).json({error:'Please submit your scan from the audit page.'});}next();
  });
- router.post('/public-api/analyze',rateLimit({windowMs:86400000,limit:3,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'You have reached the daily limit of three scans. Please try again tomorrow.'}}),async(req,res)=>{
+ router.post('/public-api/analyze',rateLimit({windowMs:86400000,limit:3,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'You have reached the daily limit of three reviews. Please try again tomorrow.'}}),async(req,res)=>{
   let input;try{input=publicInput(req.body);}catch(e){return res.status(400).json({error:e.message});}
   const today=new Date().toISOString().slice(0,10);if(day!==today){day=today;used=0;}
   if(used>=limit)return res.status(429).json({error:'Today’s scan allowance has been reached. Please try again tomorrow.'});
   if(active)return res.status(429).json({error:'Another review is running. Please try again in a few minutes.'});
-  used++;active=true;const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),300000);
+  used++;active=true;const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),480000);
   res.on('close',()=>{if(!res.writableEnded)controller.abort();});
   res.set({'Content-Type':'application/x-ndjson','Cache-Control':'no-store'});res.flushHeaders();
   const send=event=>{if(!res.destroyed)res.write(JSON.stringify(event)+'\n');};
   try{
-   let report=await buildReport(input,message=>send({type:'progress',message}),controller.signal,{ai:async()=>({status:'disabled',note:'Evidence-based page review',insights:[],drafts:[]})});
+   let report=await buildDomainReport(input,message=>send({type:'progress',message}),controller.signal,{ai:async()=>({status:'disabled',classified:0,note:'Evidence-based website review'})});
+   report=publicLiteReport(report);
    if(process.env.PAGESPEED_API_KEY)report.integrations=await collectIntegrations({report,signal:controller.signal,emit:message=>send({type:'progress',message})});
    report=withPageSpeedActions(report);prune();while(reports.size>=20)reports.delete(reports.keys().next().value);
    const id=randomBytes(24).toString('hex');reports.set(id,{report,expires:Date.now()+30*60000});send({type:'report',report,id});

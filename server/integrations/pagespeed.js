@@ -20,6 +20,7 @@ export function parsePageSpeed(data, url, strategy) {
 
 export function selectPageSpeedUrls(report) {
   if(report.mode!=='domain') return [report.target.page.url];
+  if(report.publicLite) return report.target.pages[0]?.url ? [report.target.pages[0].url] : [];
   // A small target-only sample: homepage plus one commercial/service page, if retrieved.
   const pages=report.target.pages;
   return [...new Set([pages[0]?.url,pages.find(p=>p.classification?.categories?.includes('Core services')&&p.url!==pages[0]?.url)?.url].filter(Boolean))].slice(0,2);
