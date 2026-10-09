@@ -7,7 +7,7 @@ This is a standalone static waiting page for the public website review. It must 
 - Repository: the same GitHub repository as the SEO application
 - Branch: `master`
 - Root directory: `launcher`
-- Build command: leave blank
+- Build command: `echo "No build required"`
 - Publish directory: `.`
 
 After deployment, use the static site's URL for the website button that currently links directly to the audit tool.
