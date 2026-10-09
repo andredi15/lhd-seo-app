@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Preparing your Lighthouse Digital website review.">
+  <title>Preparing Your Website Review | Lighthouse Digital</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --navy: #264653;
+      --teal: #2a9d8f;
+      --teal-dark: #1c776e;
+      --cream: #fffaf5;
+      --coral: #e76f51;
+      --line: #d7e2e1;
+      --muted: #587078;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      color: var(--navy);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(233, 196, 106, .22), transparent 30rem),
+        radial-gradient(circle at 88% 85%, rgba(42, 157, 143, .14), transparent 34rem),
+        var(--cream);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(100%, 670px);
+      padding: clamp(32px, 7vw, 64px);
+      text-align: center;
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: 0 24px 70px rgba(38, 70, 83, .1);
+    }
+    img { width: min(230px, 62vw); height: auto; margin-bottom: 34px; }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--teal-dark);
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .15em;
+    }
+    h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.4rem); line-height: 1.03; letter-spacing: -.045em; }
+    .message { max-width: 500px; margin: 20px auto 0; color: var(--muted); font-size: 1.08rem; line-height: 1.65; }
+    .loader { display: flex; justify-content: center; gap: 9px; margin: 34px 0 22px; }
+    .loader span {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--teal);
+      animation: rise 1.05s ease-in-out infinite;
+    }
+    .loader span:nth-child(2) { animation-delay: .13s; background: #e9c46a; }
+    .loader span:nth-child(3) { animation-delay: .26s; background: #f4a261; }
+    .loader span:nth-child(4) { animation-delay: .39s; background: var(--coral); }
+    #status { min-height: 1.5em; margin: 0; color: var(--navy); font-size: .92rem; font-weight: 700; }
+    #retry {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 24px;
+      padding: 13px 21px;
+      border: 0;
+      border-radius: 999px;
+      color: white;
+      background: var(--teal-dark);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    #retry:hover { background: var(--navy); }
+    .small { margin: 28px 0 0; color: #71868c; font-size: .78rem; }
+    @keyframes rise { 0%, 55%, 100% { transform: translateY(0); opacity: .45; } 25% { transform: translateY(-8px); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .loader span { animation: none; opacity: 1; } }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="logo.png?v=2" alt="Lighthouse Digital">
+    <p class="eyebrow">YOUR WEBSITE REVIEW</p>
+    <h1>We’re getting your audit ready.</h1>
+    <p class="message">Please wait a few moments while we prepare the SEO review tool. You’ll be taken there automatically when it’s ready.</p>
+    <div class="loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <p id="status" role="status" aria-live="polite">Connecting securely…</p>
+    <button id="retry" type="button" hidden>Try again</button>
+    <p class="small">You can leave this page open. There’s nothing else you need to do.</p>
+  </main>
+  <script>
+    const AUDIT_URL = 'https://lhd-seo-app.onrender.com/audit';
+    const READY_URL = 'https://lhd-seo-app.onrender.com/public-api/config';
+    const status = document.querySelector('#status');
+    const retry = document.querySelector('#retry');
+    let stopped = false;
+
+    const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+    async function checkReady() {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetch(`${READY_URL}?wake=${Date.now()}`, {
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        return response.ok;
+      } catch {
+        return false;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function prepare() {
+      stopped = false;
+      retry.hidden = true;
+      status.textContent = 'Connecting securely…';
+      const started = Date.now();
+      let attempts = 0;
+
+      while (!stopped && Date.now() - started < 120000) {
+        attempts += 1;
+        if (await checkReady()) {
+          status.textContent = 'Your review tool is ready. Taking you there now…';
+          window.location.replace(AUDIT_URL);
+          return;
+        }
+        status.textContent = attempts < 3
+          ? 'The review tool is starting up…'
+          : 'Still preparing things for you. Thanks for your patience…';
+        await pause(2500);
+      }
+
+      if (!stopped) {
+        status.textContent = 'The review tool is taking longer than expected.';
+        retry.hidden = false;
+      }
+    }
+
+    retry.addEventListener('click', prepare);
+    prepare();
+  </script>
+</body>
+</html>
